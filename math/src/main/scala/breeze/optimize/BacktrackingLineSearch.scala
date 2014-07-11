@@ -1,5 +1,7 @@
 package breeze.optimize
 
+import breeze.util.SerializableLogging
+
 /**
  * Implements the Backtracking Linesearch like that in LBFGS-C (which is (c) 2007-2010 Naoaki Okazaki under BSD)
  *
@@ -16,7 +18,7 @@ class BacktrackingLineSearch(maxIterations: Int = 20,
                              minAlpha: Double = 1E-10,
                              maxAlpha: Double = 1E10,
                              enforceWolfeConditions: Boolean = true,
-                             enforceStrongWolfeConditions:Boolean = true) extends ApproximateLineSearch {
+                             enforceStrongWolfeConditions:Boolean = true) extends ApproximateLineSearch with SerializableLogging{
   require(shrinkStep * growStep != 1.0, "Can't do a line search with growStep * shrinkStep == 1.0")
   require(cArmijo < 0.5)
   require(cArmijo > 0.0)
@@ -35,10 +37,13 @@ class BacktrackingLineSearch(maxIterations: Int = 20,
       } else {
         1.0
       }
+      logger.info(s"Backtracking:multiplier: $multiplier")
       if(multiplier == 1.0) {
+        logger.info(s"Backtracking:multiplier==1, iter: $iter")
         (state, true, iter)
       } else {
         val newAlpha = alpha * multiplier
+        logger.info(s"Backtracking:L1_newAlpha: $newAlpha")
         if (iter >= maxIterations) {
           throw new LineSearchFailed(0.0, 0.0)
         } else if(newAlpha < minAlpha) {
@@ -47,6 +52,7 @@ class BacktrackingLineSearch(maxIterations: Int = 20,
           throw new StepSizeOverflow()
         }
         val (fvalnew, fderivnew) = f.calculate(newAlpha)
+        logger.info(s"Backtracking:L1_fvalue: $fvalnew")
         (State(newAlpha, fvalnew, fderivnew), false, iter+1)
       }
     }.takeWhile(triple => !triple._2 && (triple._3 < maxIterations)).map(_._1)

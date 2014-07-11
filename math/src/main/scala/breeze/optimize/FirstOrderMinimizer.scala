@@ -15,10 +15,9 @@ import org.apache.commons.math3.random.MersenneTwister
  */
 abstract class FirstOrderMinimizer[T, DF<:StochasticDiffFunction[T]](maxIter: Int = -1,
                                                                      tolerance: Double=1E-6,
-                                                                     improvementTol: Double=1E-3,
+                                                                     improvementTol: Double=1E-5,
                                                                      val minImprovementWindow: Int = 10,
                                                                      val numberOfImprovementFailures: Int = 1)(implicit space: NormedModule[T, Double]) extends Minimizer[T,DF] with SerializableLogging {
-
   import space.normImpl
 
   /**
@@ -125,8 +124,10 @@ abstract class FirstOrderMinimizer[T, DF<:StochasticDiffFunction[T]](maxIter: In
         failedOnce = false
         var s = State(x,value,grad,adjValue,adjGrad,state.iter + 1, state.initialAdjVal, history, newAverage, 0)
         val improvementFailure = (state.fVals.length >= minImprovementWindow && state.fVals.nonEmpty && state.fVals.last > state.fVals.head * (1-improvementTol))
-        if(improvementFailure)
+        if(improvementFailure) {
+          logger.info("FirstOrder:improvement failure.")
           s = s.copy(fVals = IndexedSeq.empty, numImprovementFailures = state.numImprovementFailures + 1)
+        }
         s
       } catch {
         case x: FirstOrderException if !failedOnce =>
