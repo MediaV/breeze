@@ -34,9 +34,11 @@ class OWLQN[T](maxIter: Int, m: Int,  l1reg: Double=1.0, tolerance: Double = 1E-
 
   override protected def determineStepSize(state: State, f: DiffFunction[T], dir: T) = {
     val iter = state.iter
+    logger.info(s"OWLQN:iter: $iter")
 
     val normGradInDir = {
       val possibleNorm = dir dot state.grad
+      logger.info(s"OWLQN:possibleNorm: $possibleNorm")
 //      if (possibleNorm > 0) { // hill climbing is not what we want. Bad LBFGS.
 //        logger.warn("Direction of positive gradient chosen!")
 //        logger.warn("Direction is:" + possibleNorm)
@@ -64,7 +66,7 @@ class OWLQN[T](maxIter: Int, m: Int,  l1reg: Double=1.0, tolerance: Double = 1E-
     }
     val search = new BacktrackingLineSearch(shrinkStep= if(iter < 1) 0.1 else 0.5)
     val alpha = search.minimize(ff, if(iter < 1) .5/norm(state.grad) else 1.0)
-
+    logger.info(s"OWLQN:step size: $alpha")
     alpha
   }
 
@@ -93,6 +95,7 @@ class OWLQN[T](maxIter: Int, m: Int,  l1reg: Double=1.0, tolerance: Double = 1E-
       }
     })
     val adjValue = newVal + l1reg * norm(newX, 1)
+    logger.info(s"OWLQN:L1_fvalue: $adjValue")
     adjValue -> res
   }
 
