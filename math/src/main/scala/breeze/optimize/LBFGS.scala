@@ -87,19 +87,19 @@ object LBFGS {
   case class ApproximateInverseHessian[T](m: Int,
                                           private[LBFGS] val memStep: IndexedSeq[T] = IndexedSeq.empty,
                                           private[LBFGS] val memGradDelta: IndexedSeq[T] = IndexedSeq.empty)
-                                         (implicit vspace: MutableInnerProductSpace[T, Double]) extends NumericOps[ApproximateInverseHessian[T]] {
+                                         (implicit vspace: MutableInnerProductSpace[T, Double]) extends NumericOps[ApproximateInverseHessian[T]] with SerializableLogging {
 
     import vspace._
-
+    logger.info("CHECK:LBFGS:enter approximate inverse hessian matrix.")
     def repr: ApproximateInverseHessian[T] = this
 
     def updated(step: T, gradDelta: T) = {
+      logger.info("CHECK:LBFGS:update hessian matrix.")
       val memStep = (step +: this.memStep) take m
       val memGradDelta = (gradDelta +: this.memGradDelta) take m
 
       new ApproximateInverseHessian(m, memStep,memGradDelta)
     }
-
 
     def historyLength = memStep.length
 

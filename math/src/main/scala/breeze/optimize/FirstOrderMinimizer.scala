@@ -14,9 +14,9 @@ import breeze.util.SerializableLogging
  */
 abstract class FirstOrderMinimizer[T, DF<:StochasticDiffFunction[T]](maxIter: Int = -1,
                                                                      tolerance: Double=1E-6,
-                                                                     improvementTol: Double=1E-3,
+                                                                     improvementTol: Double=1E-5,
                                                                      val minImprovementWindow: Int = 10,
-                                                                     val numberOfImprovementFailures: Int = 1)(implicit vspace: NormedVectorSpace[T, Double]) extends Minimizer[T,DF] with SerializableLogging {
+                                                                     val numberOfImprovementFailures: Int = 1)(implicit vspace: NormedVectorSpace[T, Double]) extends Minimizer[T,DF] with SerializableLogging  {
 
   type History
   case class State(x: T,
@@ -76,8 +76,10 @@ abstract class FirstOrderMinimizer[T, DF<:StochasticDiffFunction[T]](maxIter: In
         failedOnce = false
         var s = State(x,value,grad,adjValue,adjGrad,state.iter + 1, state.initialAdjVal, history, newAverage, 0)
         val improvementFailure = (state.fVals.length >= minImprovementWindow && state.fVals.nonEmpty && state.fVals.last > state.fVals.head * (1-improvementTol))
-        if(improvementFailure)
+        if(improvementFailure) {
+          logger.info("FirstOrder:improvement failure.")
           s = s.copy(fVals = IndexedSeq.empty, numImprovementFailures = state.numImprovementFailures + 1)
+        }
         s
       } catch {
         case x: FirstOrderException if !failedOnce =>
@@ -91,12 +93,35 @@ abstract class FirstOrderMinimizer[T, DF<:StochasticDiffFunction[T]](maxIter: In
     }.takeUpToWhere(iteratingShouldStop)
     it: Iterator[State]
   }
+/*
   def iteratingShouldStop(state: State) = {
     ((state.iter >= maxIter && maxIter >= 0)
       || (!state.fVals.isEmpty && (state.adjustedValue - state.fVals.max).abs <= tolerance)
       || (state.numImprovementFailures >= numberOfImprovementFailures)
       || (norm(state.adjustedGradient) <= math.max(tolerance * state.adjustedValue.abs,1E-8))
       || state.searchFailed)
+  }
+*/
+  def iteratingShouldStop(state: State) = {
+    if (state.iter >= maxIter && maxIter >= 0) {
+      logger.info("FirstOrder:reach maximum iteration.")
+      true
+    } else if (!state.fVals.isEmpty && (state.adjustedValue - state.fVals.max).abs <= tolerance) {
+      logger.info("FirstOrder:fvalue convergence.")
+      true
+    } else if (state.numImprovementFailures >= numberOfImprovementFailures) {
+      logger.info("FirstOrder:reached maximum failure number.")
+      true
+    } else if (norm(state.adjustedGradient) <= math.max(tolerance * state.adjustedValue.abs,1E-8)) {
+      logger.info("FirstOrder:gradient convergence.")
+      true
+    } else if (state.searchFailed) {
+      logger.info("FirstOrder:search failed.")
+      true
+    } else {
+      logger.info("FirstOrder:continue iteration.")
+      false
+    }
   }
 
   def minimize(f: DF, init: T): T = {
